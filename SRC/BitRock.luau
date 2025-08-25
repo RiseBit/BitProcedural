@@ -1,5 +1,4 @@
---# Made by RiseBit, and well if you want to use it feel free too
--- Goodluck w your project.
+--# Rock Effects Module - Made by RiseBit
 --!strict
 
 export type CraterConfig = {
@@ -32,44 +31,22 @@ export type RockPropelConfig = {
 	material: Enum.Material?
 }
 
-export type BloodConfig = {
-	originPos: Vector3,
-	minAmount: number,
-	maxAmount: number,
-	force: number?
-}
-
-export type DrippingBloodConfig = {
-	originPos: Vector3,
-	minAmount: number,
-	maxAmount: number,
-	maxBloodDistance: number,
-	bloodDuration: number
-}
-
-export type WholeBloodConfig = {
-	originPos: Vector3,
-	minAmount: number,
-	maxAmount: number,
-	force: number,
-	bloodDuration: number
-}
-
--- | PRIVATE FUNCTION |
+-- Services
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
-local Debris = game:GetService("Debris")
 
+-- Tween configurations
 local Tweens = {
 	["CircleCraterPop"] = TweenInfo.new(.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 	["CircleCraterOut"] = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
 	["ExplosiveCraterPop"] = TweenInfo.new(.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
 }
 
--- Table to ignore parts/models (etc, characters) in raycasts.
+-- Table to ignore parts/models in raycasts
 local PartToIgnore: {Instance} = {}
 
+-- Setup ignore list for raycasting
 local function setupIgnoreListListeners()
 	for _, child in workspace:GetChildren() do
 		if child:IsA("Model") and child:FindFirstChild("Humanoid") then
@@ -86,20 +63,20 @@ local function setupIgnoreListListeners()
 	workspace.ChildAdded:Connect(function(child)
 		if child:FindFirstChild("Humanoid") then
 			table.insert(PartToIgnore, child)
-			end
+		end
 	end)
 
 	workspace.ChildRemoved:Connect(function(child)
-			local index = table.find(PartToIgnore, child)
-			if index then
-				table.remove(PartToIgnore, index)
-			end
+		local index = table.find(PartToIgnore, child)
+		if index then
+			table.remove(PartToIgnore, index)
+		end
 	end)
 end
 
 setupIgnoreListListeners()
 
--- | HELPER FUNCTION |
+-- Helper Functions
 local function createPart(position: Vector3, size: Vector3, material: Enum.Material, cframe: CFrame?, transparency: number?, anchored: boolean?, canCollide: boolean?)
 	local part = Instance.new("Part")
 	part.Position = position
@@ -108,28 +85,23 @@ local function createPart(position: Vector3, size: Vector3, material: Enum.Mater
 	part.Transparency = transparency or 0
 	part.Anchored = anchored ~= false
 	part.CanCollide = canCollide or false
-	
+
 	if cframe then
 		part.CFrame = cframe
 	end
-	
+
 	part.Parent = workspace
-	
 	table.insert(PartToIgnore, part)
 	return part
 end
 
-
 local function destroyPart(part: BasePart)
 	local index = table.find(PartToIgnore, part)
-	
 	if index then
 		table.remove(PartToIgnore, index)
 	end
-	
 	part:Destroy()
 end
-
 
 local function applyShake(part: BasePart, intensity: number, duration: number?)
 	local connection = RunService.Heartbeat:Connect(function(dt)
@@ -138,7 +110,7 @@ local function applyShake(part: BasePart, intensity: number, duration: number?)
 		local z = (math.random() - 0.5) * intensity
 		part.CFrame = part.CFrame * CFrame.Angles(x, y, z)
 	end)
-	
+
 	if duration then
 		task.delay(duration, function()
 			connection:Disconnect()
@@ -146,34 +118,32 @@ local function applyShake(part: BasePart, intensity: number, duration: number?)
 	end
 end
 
-
 local function getFloorPosition(startPos: Vector3): Vector3?
 	local params = RaycastParams.new()
 	params.FilterDescendantsInstances = PartToIgnore
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	
+
 	local ray = workspace:Raycast(startPos, Vector3.new(0, -50, 0), params)
 	if not ray then return nil end
-	
+
 	return ray.Position
 end
-
 
 local function tweenCraterPart(part: BasePart, popYPoint: number, realisticFade: boolean, popTweenInfo: TweenInfo, outTweenInfo: TweenInfo, scaleFactor: number)
 	if realisticFade then
 		part.Position += Vector3.yAxis * popYPoint
 		part.Transparency = 0
-		
+
 		applyShake(part, 0.02)
 		local t1 = TweenService:Create(part, popTweenInfo, { Size = part.Size * scaleFactor })
 		t1:Play()
-		
+
 		t1.Completed:Once(function()
 			task.wait(0.9)
 			applyShake(part, 0.05)
 			local t2 = TweenService:Create(part, outTweenInfo, { Position = part.Position - Vector3.yAxis * 10, Size = part.Size / scaleFactor })
 			t2:Play()
-			
+
 			t2.Completed:Once(function()
 				destroyPart(part)
 			end)
@@ -181,13 +151,13 @@ local function tweenCraterPart(part: BasePart, popYPoint: number, realisticFade:
 	else
 		local t1 = TweenService:Create(part, popTweenInfo, { Position = part.Position + Vector3.yAxis * popYPoint, Size = part.Size * scaleFactor, Transparency = 0 })
 		t1:Play()
-		
+
 		t1.Completed:Once(function()
 			task.wait(0.9)
-			
+
 			local t2 = TweenService:Create(part, outTweenInfo, { Position = part.Position - Vector3.yAxis * 10, Size = part.Size / scaleFactor, Transparency = 0.6 })
 			t2:Play()
-			
+
 			t2.Completed:Once(function()
 				destroyPart(part)
 			end)
@@ -195,40 +165,15 @@ local function tweenCraterPart(part: BasePart, popYPoint: number, realisticFade:
 	end
 end
 
+-- Main Module
+local RockModule = {}
 
-local function createBloodPart(position: Vector3, size: Vector3?, shape: Enum.PartType?, anchored: boolean?, transparency: number?)
-	local part = Instance.new("Part")
-	part.Name = "BloodDrop"
-	part.Size = size or Vector3.new(0.218, 0.218, 0.218)
-	part.Shape = shape or Enum.PartType.Ball
-	part.Material = Enum.Material.Neon
-	part.BrickColor = BrickColor.new("Really red")
-	part.CanCollide = false
-	part.Anchored = anchored or false
-	part.Transparency = transparency or 0
-	part.Position = position
-	part.Parent = workspace
-	return part
-end
-
--- | PUBLIC FUNCTION |
-local Procedural = {}
-
---- | Required Module |
-
---Procedural.Dungeon = require(script.DungeonProecdural)
--- Will add This on Later Version
-
----
-
-
-
--- Circle Crater: Evenly spaced rocks in a circle.
-function Procedural.CircleCrater(config: CraterConfig)
+-- Circle Crater: Evenly spaced rocks in a circle
+function RockModule.CircleCrater(config: CraterConfig)
 	if not config.radius then warn("please add RADIUS to your Config") return end
 	if not config.rockAmount then warn("please add ROCK AMOUNT to your Config") return end
 	if not config.size then warn("please add SIZE to your Config") return end
-	
+
 	local popYPoint = .83
 	local angleIncrement = (math.pi * 2) / config.rockAmount
 	local popOneByOne = config.popOneByOne or false
@@ -240,8 +185,7 @@ function Procedural.CircleCrater(config: CraterConfig)
 		local z = config.originPos.Z + math.sin(angleIncrement * i) * config.radius
 		local floorPos = getFloorPosition(Vector3.new(x, config.originPos.Y + config.size.Y/2, z))
 		if not floorPos then continue end
-		
-		--- In here i dont use config.size.Y/2, just because it looks ugly when the Rock Cames out fully
+
 		local partPos = Vector3.new(x, (floorPos.Y) - popYPoint, z)
 		local cframe = CFrame.new(partPos, config.originPos) * CFrame.Angles(0, 0, math.rad(30)) 
 		local part = createPart(partPos, config.size, material, cframe, 0.8, true, false)
@@ -254,12 +198,12 @@ function Procedural.CircleCrater(config: CraterConfig)
 	end
 end
 
--- Overlapping Crater: Random, overlapping rocks with gaps.
-function Procedural.OverlappingCrater(config: CraterConfig)
+-- Overlapping Crater: Random, overlapping rocks with gaps
+function RockModule.OverlappingCrater(config: CraterConfig)
 	if not config.radius then warn("please add RADIUS to your Config") return end
 	if not config.rockAmount then warn("please add ROCK AMOUNT to your Config") return end
 	if not config.size then warn("please add SIZE to your Config") return end
-	
+
 	local popYPoint = 1
 	local amountRockAppear = math.round(math.random(config.rockAmount / 5, config.rockAmount / 2))
 	local alreadyAppear = 0
@@ -271,7 +215,7 @@ function Procedural.OverlappingCrater(config: CraterConfig)
 	for i = 1, config.rockAmount do
 		if alreadyAppear >= amountRockAppear then break end
 		local gapChance = math.round(math.random(config.rockAmount / 5, config.rockAmount / 2))
-		
+
 		if i % gapChance ~= 0 then continue end
 		alreadyAppear += 1
 
@@ -292,12 +236,12 @@ function Procedural.OverlappingCrater(config: CraterConfig)
 	end
 end
 
--- Explosive Crater: Multi-layered expanding craters.
-function Procedural.ExplosiveCrater(config: ExplosiveCraterConfig)
+-- Explosive Crater: Multi-layered expanding craters
+function RockModule.ExplosiveCrater(config: ExplosiveCraterConfig)
 	if not config.radius then warn("please add RADIUS to your Config") return end
 	if not config.rockAmount then warn("please add ROCK AMOUNT to your Config") return end
 	if not config.size then warn("please add SIZE to your Config") return end
-	
+
 	if config.layerAmount <= 1 then return end
 	local popYPoint = 1.5
 	local realisticFade = config.realisticFade or false
@@ -316,7 +260,7 @@ function Procedural.ExplosiveCrater(config: ExplosiveCraterConfig)
 		for z = 1, layer.rockAmount do
 			local x = config.originPos.X + math.cos(angleIncrement * z) * layer.radius
 			local zz = config.originPos.Z + math.sin(angleIncrement * z) * layer.radius
-			
+
 			local floorPos = getFloorPosition(Vector3.new(x, config.originPos.Y + config.size.Y/2, zz))
 			if not floorPos then continue end
 
@@ -330,13 +274,13 @@ function Procedural.ExplosiveCrater(config: ExplosiveCraterConfig)
 	end
 end
 
--- Rock Propel: Propel rocks outward.
-function Procedural.RockPropel(config: RockPropelConfig)
+-- Rock Propel: Propel rocks outward
+function RockModule.RockPropel(config: RockPropelConfig)
 	if RunService:IsServer() then warn("For Smoother Result Run this on Client") end
 	if not config.minAmount or not config.maxAmount then warn("please add MINAMOUNT AND MAXAMOUNT to your Config") return end
 	if not config.originPos then warn("please add ORIGIN POSITION to your Config") return end
 	if not config.force then warn("please add FORCE to your Config") return end
-	
+
 	local rockAmount = math.random(config.minAmount, config.maxAmount)
 	local angleIncrement = (math.pi * 2) / rockAmount
 	local material = config.material or Enum.Material.Rock
@@ -344,7 +288,7 @@ function Procedural.RockPropel(config: RockPropelConfig)
 	for i = 1, rockAmount do
 		local x = math.cos(angleIncrement * (math.random(-1, 1) * rockAmount)) * config.radius
 		local z = math.sin(angleIncrement * (math.random(-1, 1) * rockAmount)) * config.radius
-		
+
 		local floorPos = getFloorPosition(Vector3.new(x, config.originPos.Y + config.size.Y/2, z))
 		if not floorPos then continue end
 
@@ -357,120 +301,11 @@ function Procedural.RockPropel(config: RockPropelConfig)
 
 		local fadeTween = TweenService:Create(part, TweenInfo.new(1.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Transparency = 1 })
 		fadeTween:Play()
-		
+
 		fadeTween.Completed:Once(function()
 			destroyPart(part)
 		end)
 	end
 end
 
-
--- Small Blood: Blood that Spread around but no Drips
-function Procedural.SmallBlood(config: BloodConfig)
-	if RunService:IsServer() then warn("For Smoother Result Run this on Client") end
-	if not config.minAmount or not config.maxAmount then warn("please add MINAMOUNT AND MAXAMOUNT to your Config") return end
-	if not config.originPos then warn("please add ORIGIN POSITION to your Config") return end
-	if not config.force then warn("please add FORCE to your Config") return end
-	
-	local bloodAmount = math.random(config.minAmount, config.maxAmount)
-	local force = config.force or 1
-
-	for _ = 1, bloodAmount do
-		local offset = Vector3.new(math.random(-1, 1) * 0.5, math.random(-1, 1) * 0.5, math.random(-1, 1) * 0.5)
-		local part = createBloodPart(config.originPos + offset, nil, nil, false, 1)
-
-		task.wait()
-		local impulse = Vector3.new(math.random(-1, 1) * force, math.random(0, 1) * force, math.random(-1, 1) * force)
-		part:ApplyImpulse(part.AssemblyMass * impulse)
-		part.Transparency = 0
-		Debris:AddItem(part, 3)
-	end
-end
-
--- Dripping Blood: Blood that Drips and Gone in Floor (no Drop)
-function Procedural.DrippingBlood(config: DrippingBloodConfig)
-	if RunService:IsServer() then warn("For Smoother Result Run this on Client") end
-	if not config.minAmount or not config.maxAmount then warn("please add MINAMOUNT AND MAXAMOUNT to your Config") return end
-	if not config.originPos then warn("please add ORIGIN POSITION to your Config") return end
-	if not config.bloodDuration then warn("please add BLOOD DURATION to your Config") return end
-	if not config.maxBloodDistance then warn("please add MAX BLOOD DISTANCE to your Config") return end
-	
-	local bloodAmount = math.random(config.minAmount, config.maxAmount)
-
-	for _ = 1, bloodAmount do
-		local x = config.originPos.X + math.random(-config.maxBloodDistance, config.maxBloodDistance)
-		local z = config.originPos.Z + math.random(-config.maxBloodDistance, config.maxBloodDistance)
-		
-		local floorPos = getFloorPosition(Vector3.new(x, config.originPos.Y, z))
-		if not floorPos then continue end
-
-		local partPos = Vector3.new(x, floorPos.Y + floorPos.Y / 2, z)
-		local part = createBloodPart(partPos, Vector3.new(0.5, 0.35, 0.5), Enum.PartType.Cylinder, true, 1)
-		part.Rotation = Vector3.new(0, 0, 90)
-
-		local originalSize = part.Size
-		local scaleUpInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-		local scaleUp = TweenService:Create(part, scaleUpInfo, { Size = Vector3.new(originalSize.X * 0.25, originalSize.Y * 5, originalSize.Z * 6), Transparency = 0 })
-		scaleUp:Play()
-
-		scaleUp.Completed:Once(function()
-			local scaleDownInfo = TweenInfo.new(config.bloodDuration - 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-			local scaleDown = TweenService:Create(part, scaleDownInfo, { Transparency = 1 })
-			scaleDown:Play()
-		end)
-
-		Debris:AddItem(part, config.bloodDuration)
-	end
-end
-
--- Whole Blood: Blood that Fall and Drips in floor
-function Procedural.WholeBlood(config: WholeBloodConfig)
-	if RunService:IsServer() then warn("For Smoother Result Run this on Client") end
-	if not config.minAmount or not config.maxAmount then warn("please add MINAMOUNT AND MAXAMOUNT to your Config") return end
-	if not config.originPos then warn("please add ORIGIN POSITION to your Config") return end
-	if not config.bloodDuration then warn("please add BLOOD DURATION to your Config") return end
-	if not config.force then warn("please add FORCE to your Config") return end
-	
-	local bloodAmount = math.random(config.minAmount, config.maxAmount)
-
-	for _ = 1, bloodAmount do
-		task.spawn(function()
-			local offset = Vector3.new(math.random(-1, 1) * 0.5, math.random(-1, 1) * 0.5, math.random(-1, 1) * 0.5)
-			local part = createBloodPart(config.originPos + offset)
-
-			local impulse = Vector3.new(math.random(-1, 1) * config.force, math.random(0, 2) * config.force, math.random(-1, 1) * config.force)
-			part:ApplyImpulse(part.AssemblyMass * impulse)
-
-			part.Touched:Connect(function(hit)
-				if hit.Parent and hit.Parent:IsA("Accessory") then return end
-				if hit.Parent and hit.Parent:FindFirstChild("Humanoid") or hit.Name == "BloodDrop" then return end
-
-				part.Anchored = true
-				part.Position += Vector3.yAxis -- required so that it above on the Floor slightly so that the ray can found the floor
-				local floorPos = getFloorPosition(part.Position)
-				if not floorPos then return end
-
-				part.Shape = Enum.PartType.Cylinder
-				part.CFrame = CFrame.new(Vector3.new(part.Position.X, floorPos.Y, part.Position.Z))
-				part.Rotation = Vector3.new(0, 0, 90)
-
-				local originalSize = part.Size
-				local scaleUpInfo = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-				local scaleUp = TweenService:Create(part, scaleUpInfo, { Size = Vector3.new(originalSize.X * 0.25, originalSize.Y * 7, originalSize.Z * 9), Transparency = 0.4 })
-				scaleUp:Play()
-
-				scaleUp.Completed:Once(function()
-					local scaleDownInfo = TweenInfo.new(config.bloodDuration - 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-					local scaleDown = TweenService:Create(part, scaleDownInfo, { Size = Vector3.new(part.Size.X * 1.1, part.Size.Y * 0.9, part.Size.Z * 0.85), Transparency = 1 })
-					scaleDown:Play()
-					
-					scaleDown.Completed:Once(function()
-						part:Destroy()
-					end)
-				end)
-			end)
-		end)
-	end
-end
-
-return Procedural
+return RockModule
