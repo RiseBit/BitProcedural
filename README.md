@@ -1,4 +1,4 @@
-# BitProceural
+# BitProceural ( Always Open to feedback, DM me On Discord : risebit )
 A simple and efficient procedural generation library for Roblox.
 
 ## 🚀 Features
