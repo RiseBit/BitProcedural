@@ -60,7 +60,12 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local Debris = game:GetService("Debris")
-local Tweens = require(script.Tweens)
+
+local Tweens = {
+	["CircleCraterPop"] = TweenInfo.new(.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+	["CircleCraterOut"] = TweenInfo.new(1, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
+	["ExplosiveCraterPop"] = TweenInfo.new(.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+}
 
 -- Table to ignore parts/models (etc, characters) in raycasts.
 local PartToIgnore: {Instance} = {}
@@ -208,6 +213,14 @@ end
 
 -- | PUBLIC FUNCTION |
 local Procedural = {}
+
+--- | Required Module |
+
+Procedural.Dungeon = require(script.DungeonProecdural)
+
+---
+
+
 
 -- Circle Crater: Evenly spaced rocks in a circle.
 function Procedural.CircleCrater(config: CraterConfig)
